@@ -1,0 +1,128 @@
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+/* ページ全体のコンテナ */
+.page-container {
+  width: 100%;
+  max-width: 960px;
+  margin: 2rem auto;
+  padding: 1rem;
+}
+
+/* 各セクション */
+.dashboard-section {
+  background-color: #2c2c2c;
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  text-align: left;
+}
+
+.dashboard-section h2 {
+  margin-top: 0;
+  border-bottom: 2px solid #646cff;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+/* テーブルのスタイル */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+th, td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #444;
+  text-align: left;
+}
+
+th {
+  background-color: #333;
+}
+
+tbody tr:hover {
+  background-color: #3a3a3a;
+}
+/* プロフィールフォームのスタイル */
+.profile-form {
+  max-width: 500px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background-color: #2c2c2c;
+  border-radius: 8px;
+  border: 1px solid #444;
+}
+
+/* フォームグループ (login-containerと同じスタイルを再利用) */
+.form-group {
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  box-sizing: border-box; /* paddingを含めてwidth 100%にするため */
+  padding: 0.8em 1em;
+  border: 1px solid #555;
+  background-color: #1e1e1e;
+  border-radius: 6px;
+  color: inherit;
+  font-size: 1em;
+}
+
+.form-group input:disabled {
+  background-color: #444;
+  color: #888;
+  cursor: not-allowed;
+}
