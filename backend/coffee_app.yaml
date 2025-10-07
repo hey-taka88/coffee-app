@@ -1,0 +1,148 @@
+users:
+- id: 1
+  name: 山田太郎
+  department: 営業部
+  email: taro.yamada@example.com
+  preferred_beans: エチオピア・シダモ
+  hashed_password: $2b$12$QO12glxxpeexGgcLApQO2uRK53zldig41FlplF66k89.0fqU0Ejv6
+  role: admin
+- id: 2
+  name: 佐藤花子
+  department: 開発部
+  email: hanako.sato@example.com
+  preferred_beans: コロンビア・スプレモ
+  hashed_password: $2b$12$QO12glxxpeexGgcLApQO2uRK53zldig41FlplF66k89.0fqU0Ejv6
+  role: customer
+orders:
+- id: 1001
+  user_id: 1
+  date: '2024-07-03'
+  time: '10:30'
+  size: M
+  beans: エチオピア・シダモ
+  status: pending
+  notes: ミルク少なめで
+- id: 1002
+  user_id: 2
+  date: '2024-07-03'
+  time: '14:00'
+  size: L
+  beans: コロンビア・スプレモ
+  status: pending
+  notes: ''
+- id: 1003
+  user_id: 1
+  date: '2025-09-11'
+  time: '10:00'
+  size: M
+  beans: エチオピア・シダモ
+  status: pending
+  notes: ''
+- id: 1004
+  user_id: 1
+  date: '2025-09-15'
+  time: '10:00'
+  size: M
+  beans: エチオピア・シダモ
+  status: pending
+  notes: ''
+- id: 1005
+  user_id: 1
+  date: '2025-09-15'
+  time: '10:00'
+  size: M
+  beans: エチオピア・シダモ
+  status: pending
+  notes: ''
+- id: 1006
+  user_id: 1
+  date: '2025-09-22'
+  time: '10:00'
+  size: M
+  beans: エチオピア・シダモ
+  status: pending
+  notes: ''
+settings:
+  coffee_shop:
+    name: 出張コーヒー屋
+    address: オフィスビル 3F
+    contact: 080-1234-5678
+  operational_hours:
+    start: 09:00
+    end: '18:00'
+  bean_inventory:
+    エチオピア・シダモ: 6
+    コロンビア・スプレモ: 8
+  notifications:
+    enable_push: true
+    reminder_minutes_before: 10
+products:
+- id: bean-001
+  name: オリジナルブレンド『夜明け』
+  description: 深煎りでコクがあり、ミルクとの相性も抜群です。
+  price: 1500
+  stock: 42
+  image_url: /images/yoake-blend.jpg
+- id: bean-002
+  name: エチオピア・シダモ G1 ナチュラル
+  description: 華やかな香りと、ベリーのような甘酸っぱさが特徴です。
+  price: 1800
+  stock: 29
+  image_url: /images/ethiopia-sidamo.jpg
+bean_orders:
+- order_id: bo-001
+  user_id: 1
+  date: '2025-09-08'
+  items:
+  - product_id: bean-001
+    quantity: 2
+  total_price: 3000
+  shipping_address: 東京都千代田区...
+  status: paid
+- order_id: bo-002
+  user_id: 1
+  date: '2025-09-09'
+  items:
+  - id: bean-001
+    quantity: 1
+  total_price: 1500
+  shipping_address: （テスト用の住所）
+  status: paid
+- order_id: bo-003
+  user_id: 1
+  date: '2025-09-15'
+  items:
+  - id: bean-001
+    quantity: 1
+  - id: bean-002
+    quantity: 1
+  total_price: 3300
+  shipping_address: （テスト用の住所）
+  status: paid
+- order_id: bo-004
+  user_id: 1
+  date: '2025-09-15'
+  items:
+  - id: bean-001
+    quantity: 2
+  total_price: 3000
+  shipping_address: （テスト用の住所）
+  status: paid
+- order_id: bo-005
+  user_id: 1
+  date: '2025-09-15'
+  items:
+  - id: bean-001
+    quantity: 3
+  total_price: 4500
+  shipping_address: （テスト用の住所）
+  status: paid
+- order_id: bo-006
+  user_id: 1
+  date: '2025-09-15'
+  items:
+  - id: bean-001
+    quantity: 1
+  total_price: 1500
+  shipping_address: （テスト用の住所）
+  status: paid
