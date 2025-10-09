@@ -98,6 +98,11 @@ export function createOrder(orderData) {
  * @returns {Promise<any>}
  */
 export function createBeanOrder(orderData) {
+  return fetchWithAuth('/bean_orders', {
+    method: 'POST',
+    body: JSON.stringify(orderData),
+  });
+}
 
 /**
  * 注文履歴を取得するAPI
