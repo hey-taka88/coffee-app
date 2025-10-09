@@ -34,10 +34,6 @@ export default function OrderForm({ token }) {
     fetchData();
   }, [token]);
 
-import { createOrder } from './api'; // createOrderをインポート
-
-// ... (imports and component definition) ...
-
   const handleSubmit = async (event) => {
     event.preventDefault();
     const orderData = { time: selectedTime, size: selectedSize, beans: selectedBean, notes: notes };
@@ -48,8 +44,6 @@ import { createOrder } from './api'; // createOrderをインポート
       toast.error(`エラー: ${err.message}`);
     }
   };
-
-// ... (rest of the component) ...
 
   if (isLoading) return <p>読み込み中...</p>;
   if (error) return <p>エラー: {error}</p>;
