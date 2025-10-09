@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import ProfilePage from './ProfilePage.jsx'; // プロフィールページを追加
+import { getOrderHistory } from './api'; // getOrderHistoryをインポート
 
 // このコンポーネントはApp.jsxからtokenを受け取る必要があります
 export default function OrderHistoryPage({ token }) {
@@ -10,16 +10,7 @@ export default function OrderHistoryPage({ token }) {
   useEffect(() => {
     const fetchOrderHistory = async () => {
       try {
-const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/orders/me`, {
-              headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error('注文履歴の取得に失敗しました');
-        }
-        const data = await response.json();
+        const data = await getOrderHistory();
         setOrders(data);
       } catch (err) {
         setError(err.message);

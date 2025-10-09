@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify'; // ★ 1. toast をインポート
+import { getCurrentUser, updateUserMe } from './api'; // API関数をインポート
 
 // このコンポーネントはApp.jsxからtokenを受け取ります
 export default function ProfilePage({ token }) {
@@ -15,12 +16,7 @@ export default function ProfilePage({ token }) {
   useEffect(() => {
     const fetchCurrentUser = async () => {
       try {
-const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/users/me`, {
-              headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (!response.ok) throw new Error('ユーザー情報の取得に失敗しました');
-        
-        const userData = await response.json();
+        const userData = await getCurrentUser();
         // フォームに現在のデータをセット
         setFormData({
           name: userData.name,
@@ -57,16 +53,7 @@ const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/users/me`, {
     };
 
     try {
-const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/users/me`, {
-            method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(updateData)
-      });
-      if (!response.ok) throw new Error('更新に失敗しました');
-      
+      await updateUserMe(updateData);
       toast.success('プロフィール情報を更新しました！'); // ★ 2. toast.success に置き換え
 
     } catch (err) {
