@@ -234,16 +234,26 @@ async def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(), 
     db: Session = Depends(get_db)  # ★ DBセッションを依存関係として追加
 ):
-    # db = load_data()  <- 古いコードを削除
-    user = get_user(db, form_data.username) # ★ 新しいget_user関数を呼ぶ
-    
-    if not user or not verify_password(form_data.password, user.hashed_password): # ★ user["hashed_password"] -> user.hashed_password
+    try:
+        user = get_user(db, form_data.username)
+        
+        if not user or not verify_password(form_data.password, user.hashed_password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect username or password", headers={"WWW-Authenticate": "Bearer"},
+            )
+        access_token = create_access_token(data={"sub": user.email})
+        return {"access_token": access_token, "token_type": "bearer"}
+    except Exception as e:
+        print(f"--- LOGIN ERROR ---")
+        print(f"Error in login_for_access_token: {e}")
+        import traceback
+        traceback.print_exc()
+        print(f"--- END LOGIN ERROR ---")
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password", headers={"WWW-Authenticate": "Bearer"},
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An internal server error occurred.",
         )
-    access_token = create_access_token(data={"sub": user.email}) # ★ user["email"] -> user.email
-    return {"access_token": access_token, "token_type": "bearer"}
 
 @app.get("/orders/me")
 async def read_user_orders(
