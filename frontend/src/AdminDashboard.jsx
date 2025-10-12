@@ -13,7 +13,22 @@ export default function AdminDashboard({ token }) {
   const [error, setError] = useState(null);
   const [editingProduct, setEditingProduct] = useState(null);
 
-
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      const [ordersData, inventoryData] = await Promise.all([
+        getAllOrders(),
+        getAllInventory(),
+      ]);
+      setOrders(ordersData);
+      setRoastedBeans(inventoryData.roasted_beans);
+      setDeliveryBeans(inventoryData.delivery_beans);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchData();
