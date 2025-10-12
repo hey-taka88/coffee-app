@@ -184,8 +184,27 @@ def get_db():
 
 @app.on_event("startup")
 def on_startup():
-    """アプリ起動時にデータベースとテーブルを作成する"""
+    """アプリ起動時にデータベースとテーブルを作成し、テストユーザーを登録する"""
     Base.metadata.create_all(bind=engine)
+
+    db = SessionLocal()
+    try:
+        # テストユーザーが存在するか確認
+        test_user = db.query(UserModel).filter(UserModel.email == "taro.yamada@example.com").first()
+        if not test_user:
+            # 存在しない場合、作成する
+            hashed_password = pwd_context.hash("pw")
+            new_user = UserModel(
+                email="taro.yamada@example.com",
+                name="山田 太郎",
+                hashed_password=hashed_password,
+                role="customer" # or "admin"
+            )
+            db.add(new_user)
+            db.commit()
+            print("--- Test user created ---")
+    finally:
+        db.close()
 # --- ★★★ (ここまで追加) ★★★ ---
 
 async def get_current_user(
