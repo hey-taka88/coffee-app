@@ -57,6 +57,18 @@ export async function login(email, password) {
 }
 
 /**
+ * 新規ユーザー登録API
+ * @param {object} userData - {email, password, name}
+ * @returns {Promise<any>}
+ */
+export function registerUser(userData) {
+  return fetchWithAuth('/users', {
+    method: 'POST',
+    body: JSON.stringify(userData),
+  });
+}
+
+/**
  * 現在のユーザー情報を取得するAPI
  * @returns {Promise<any>}
  */

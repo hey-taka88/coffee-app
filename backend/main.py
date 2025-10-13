@@ -44,6 +44,11 @@ app.add_middleware(
 )
 
 # --- モデル定義 ---
+class UserCreate(BaseModel):
+    email: str
+    password: str
+    name: str
+
 class User(BaseModel):
     id: int
     email: str
@@ -246,6 +251,23 @@ async def read_users_me(current_user: User = Depends(get_current_user)):
     ログイン中のユーザー情報を取得する
     """
     return current_user
+
+@app.post("/users", response_model=User, status_code=status.HTTP_201_CREATED)
+async def create_user(user: UserCreate, db: Session = Depends(get_db)):
+    """新規ユーザー登録"""
+    db_user = get_user(db, email=user.email)
+    if db_user:
+        raise HTTPException(status_code=400, detail="このメールアドレスは既に使用されています")
+    
+    hashed_password = pwd_context.hash(user.password)
+    db_user = UserModel(email=user.email, name=user.name, hashed_password=hashed_password)
+    
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    
+    return db_user
+
 # --- ★★★ ここまで追加 ★★★ ---
 # --- APIエンドポイント ---
 @app.post("/token", response_model=Token)

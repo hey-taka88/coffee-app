@@ -38,12 +38,12 @@ function Navigation({ token, onLogout, currentUser }) {
 
 import { getCurrentUser } from './api'; // getCurrentUserをインポート
 
-// --- メインのAppコンポーネント（変更あり） ---
+import RegisterPage from './RegisterPage.jsx'; // RegisterPageをインポート
+
 function App() {
   const [token, setToken] = useState(localStorage.getItem('coffee_token'));
-  const [currentUser, setCurrentUser] = useState(null); // ログインユーザー情報を保持
+  const [currentUser, setCurrentUser] = useState(null);
 
-  // トークンがある場合、ユーザー情報を取得する
   useEffect(() => {
     if (token) {
       const fetchUser = async () => {
@@ -51,7 +51,6 @@ function App() {
           const userData = await getCurrentUser();
           setCurrentUser(userData);
         } catch (error) {
-          // トークンが無効ならログアウトさせる
           localStorage.removeItem('coffee_token');
           setToken(null);
         }
@@ -64,65 +63,63 @@ function App() {
     localStorage.setItem('coffee_token', newToken);
     setToken(newToken);
   };
-  
+
   const handleLogout = () => {
     localStorage.removeItem('coffee_token');
     setToken(null);
     setCurrentUser(null);
   };
 
-  if (!token) {
-    return <div className="App"><LoginForm onLoginSuccess={handleLoginSuccess} /></div>;
-  }
-
   return (
-    <BrowserRouter>
-            <div className="App">
-        <ToastContainer // ★★★ 1. ここにToastContainerを追加 ★★★
-          position="top-right"
-          autoClose={3000}
-          hideProgressBar={false}
-          newestOnTop={false}
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme="dark"
-        />
-
-        <Navigation token={token} onLogout={handleLogout} currentUser={currentUser} />
-        <Routes>
-          <Route path="/delivery" element={<OrderForm token={token} />} />
-          <Route path="/store" element={<ProductPage />} />
-          <Route path="/my-orders" element={<OrderHistoryPage token={token} />} />
-          <Route path="/profile" element={<ProfilePage token={token} />} />
-          <Route path="/cart" element={<ShoppingCartPage token={token} />} />
-
-          {/* ★★★ 2. /admin ルートを "門番" で囲む ★★★ */}
-          <Route 
-            path="/admin" 
-            element={
-              <AdminProtectedRoute currentUser={currentUser}>
-                <AdminDashboard token={token} />
-              </AdminProtectedRoute>
-            } 
-          />
-          {/* ★★★ ここまで ★★★ */}
-          
-          <Route path="/" element={<ProductPage />} />
-        </Routes>
-      </div>
-    </BrowserRouter>
+    <div className="App">
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="dark"
+      />
+      <Navigation token={token} onLogout={handleLogout} currentUser={currentUser} />
+      <Routes>
+        {token ? (
+          <>
+            <Route path="/delivery" element={<OrderForm token={token} />} />
+            <Route path="/store" element={<ProductPage />} />
+            <Route path="/my-orders" element={<OrderHistoryPage token={token} />} />
+            <Route path="/profile" element={<ProfilePage token={token} />} />
+            <Route path="/cart" element={<ShoppingCartPage token={token} />} />
+            <Route 
+              path="/admin" 
+              element={
+                <AdminProtectedRoute currentUser={currentUser}>
+                  <AdminDashboard token={token} />
+                </AdminProtectedRoute>
+              } 
+            />
+            <Route path="/" element={<ProductPage />} />
+          </>
+        ) : (
+          <>
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="*" element={<LoginForm onLoginSuccess={handleLoginSuccess} />} />
+          </>
+        )}
+      </Routes>
+    </div>
   );
 }
 
-
-// CartProviderをmain.jsxではなく、ここでエクスポートする形にすると管理しやすい
 export default function AppWrapper() {
   return (
-    <CartProvider>
-      <App />
-    </CartProvider>
-  )
+    <BrowserRouter>
+      <CartProvider>
+        <App />
+      </CartProvider>
+    </BrowserRouter>
+  );
 }

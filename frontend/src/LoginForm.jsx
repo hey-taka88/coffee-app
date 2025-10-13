@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { login } from './api'; // login関数をインポート
+import { Link } from 'react-router-dom'; // Linkをインポート
+import { login } from './api';
 
 export default function LoginForm({ onLoginSuccess }) {
   const [email, setEmail] = useState('taro.yamada@example.com');
@@ -10,7 +11,7 @@ export default function LoginForm({ onLoginSuccess }) {
     event.preventDefault();
     setError('');
     try {
-      const data = await login(email, password); // login関数を呼び出す
+      const data = await login(email, password);
       onLoginSuccess(data.access_token);
     } catch (err) {
       setError(err.message);
@@ -32,6 +33,9 @@ export default function LoginForm({ onLoginSuccess }) {
         {error && <p className="error">{error}</p>}
         <button type="submit">ログイン</button>
       </form>
+      <p className="register-link">
+        アカウントをお持ちでないですか？ <Link to="/register">新規登録</Link>
+      </p>
     </div>
   );
 }
