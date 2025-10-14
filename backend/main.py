@@ -203,7 +203,7 @@ def on_startup():
                 email="taro.yamada@example.com",
                 name="山田 太郎",
                 hashed_password=hashed_password,
-                role="customer" # or "admin"
+                role="admin" # or "customer"
             )
             db.add(new_user)
             db.commit()

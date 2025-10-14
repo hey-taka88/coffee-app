@@ -122,7 +122,89 @@ tbody tr:hover {
 }
 
 .form-group input:disabled {
+
   background-color: #444;
+
   color: #888;
+
   cursor: not-allowed;
+
+}
+
+
+
+/* --- Badge Styles --- */
+
+.badge {
+
+  display: inline-block;
+
+  padding: 0.3em 0.7em;
+
+  font-size: 0.8em;
+
+  font-weight: 600;
+
+  line-height: 1;
+
+  text-align: center;
+
+  white-space: nowrap;
+
+  vertical-align: baseline;
+
+  border-radius: 0.5rem;
+
+  color: #fff;
+
+}
+
+
+
+.badge-blue {
+
+  background-color: #3498db; /* Blue */
+
+}
+
+
+
+.badge-green {
+
+  background-color: #2ecc71; /* Green */
+
+}
+
+
+
+.badge-yellow {
+
+  background-color: #f1c40f; /* Yellow */
+
+  color: #333;
+
+}
+
+
+
+.badge-red {
+
+  background-color: #e74c3c; /* Red */
+
+}
+
+
+
+.badge-gray {
+
+  background-color: #95a5a6; /* Gray */
+
+}
+
+
+
+.badge-purple {
+
+  background-color: #9b59b6; /* Purple */
+
 }
