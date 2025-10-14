@@ -182,3 +182,10 @@ export function updateUserMe(userData) {
   });
 }
 
+/**
+ * すべてのサブスクリプション契約を取得する (管理者用)
+ * @returns {Promise<any>}
+ */
+export function getAllSubscriptions() {
+  return fetchWithAuth('/admin/subscriptions');
+}

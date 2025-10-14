@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom'; // Linkをインポート
 import { toast } from 'react-toastify';
 import { getAllOrders, getAllInventory, updateOrderStatus } from './api';
 import ProductEditModal from './ProductEditModal.jsx';
@@ -118,6 +119,13 @@ export default function AdminDashboard({ token }) {
       )}
 
       <h1>管理者ダッシュボード</h1>
+
+      <section className="dashboard-section">
+        <h2>各種管理ページ</h2>
+        <nav>
+          <Link to="/admin/subscriptions" className="admin-nav-link">サブスクリプション契約管理</Link>
+        </nav>
+      </section>
 
       <section className="dashboard-section">
         <h2>すべての注文</h2>
