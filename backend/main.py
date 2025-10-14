@@ -625,6 +625,16 @@ async def get_all_subscriptions(
     return response
 
 
+@app.get("/admin/users", response_model=List[User])
+async def get_all_users(
+    admin_user: User = Depends(get_current_admin_user),
+    db: Session = Depends(get_db)
+):
+    """すべてのユーザーを取得する (管理者用)"""
+    users = db.query(UserModel).all()
+    return users
+
+
 @app.get("/admin/all_inventory")
 async def get_all_inventory(
     admin_user: User = Depends(get_current_admin_user),
