@@ -160,6 +160,35 @@ class OrderModel(Base):
     customer = relationship("UserModel")
     bean_type = relationship("BeanInventoryModel") # ★ 紐付けを定義
 
+
+# --- ★★★ サブスクリプション関連のDBモデル (ここから追加) ★★★ ---
+class SubscriptionContractModel(Base):
+    __tablename__ = "subscription_contracts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    plan_name = Column(String, index=True)
+    interval = Column(String) #例: "monthly", "bi-weekly"
+    next_delivery_date = Column(String) #例: "2024-11-15"
+    status = Column(String, default="active") #例: "active", "paused", "cancelled"
+    renewal_count = Column(Integer, default=0)
+
+    customer = relationship("UserModel")
+    items = relationship("SubscriptionContractItemModel", back_populates="contract")
+
+class SubscriptionContractItemModel(Base):
+    __tablename__ = "subscription_contract_items"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    contract_id = Column(Integer, ForeignKey("subscription_contracts.id"))
+    product_id = Column(String, ForeignKey("products.id"))
+    quantity = Column(Integer, default=1)
+
+    contract = relationship("SubscriptionContractModel", back_populates="items")
+    product = relationship("ProductModel")
+# --- ★★★ (ここまで追加) ★★★ ---
+
+
 # --- ★★★ (ここまで追加) ★★★ ---
 
 
@@ -207,7 +236,55 @@ def on_startup():
             )
             db.add(new_user)
             db.commit()
+            db.refresh(new_user)
+            test_user = new_user
             print("--- Test user created ---")
+
+        # サンプル商品が存在するか確認
+        sample_product = db.query(ProductModel).filter(ProductModel.id == "bean-001").first()
+        if not sample_product:
+            new_product = ProductModel(
+                id="bean-001",
+                name="夜明けのブレンド",
+                description="フルーティーな酸味と、花のような甘い香りが特徴。",
+                price=1500,
+                stock=100,
+                image_url="/yoake-blend.jpg"
+            )
+            db.add(new_product)
+            db.commit()
+            print("--- Sample product created ---")
+
+        # サンプルサブスクリプション契約が存在するか確認
+        sample_contract = db.query(SubscriptionContractModel).first()
+        if not sample_contract:
+            # 翌月の15日を計算
+            today = datetime.now(timezone.utc)
+            next_month = today.replace(day=1) + timedelta(days=32)
+            next_delivery_date = next_month.replace(day=15).strftime("%Y-%m-%d")
+
+            new_contract = SubscriptionContractModel(
+                user_id=test_user.id,
+                plan_name="月替わり2種セット",
+                interval="monthly",
+                next_delivery_date=next_delivery_date,
+                status="active",
+                renewal_count=3
+            )
+            db.add(new_contract)
+            db.commit()
+            db.refresh(new_contract)
+
+            # 契約に商品を紐付ける
+            new_item = SubscriptionContractItemModel(
+                contract_id=new_contract.id,
+                product_id="bean-001",
+                quantity=2
+            )
+            db.add(new_item)
+            db.commit()
+            print("--- Sample subscription created ---")
+
     finally:
         db.close()
 # --- ★★★ (ここまで追加) ★★★ ---
@@ -483,6 +560,71 @@ async def create_bean_order(
             raise HTTPException(status_code=500, detail=f"サーバー内部でエラーが発生しました。")
 
 # --- ★★★ 管理者用の新しいAPI（全在庫取得） ★★★ ---
+
+# --- サブスクリプションAPI用のレスポンスモデル ---
+class SubscriptionContractItemResponse(BaseModel):
+    product_id: str
+    quantity: int
+    product_name: str
+
+    class Config:
+        orm_mode = True
+
+class SubscriptionContractResponse(BaseModel):
+    id: int
+    user_id: int
+    plan_name: str
+    interval: str
+    next_delivery_date: str
+    status: str
+    renewal_count: int
+    customer_name: str
+    items: List[SubscriptionContractItemResponse]
+
+    class Config:
+        orm_mode = True
+
+@app.get("/admin/subscriptions", response_model=List[SubscriptionContractResponse])
+async def get_all_subscriptions(
+    admin_user: User = Depends(get_current_admin_user),
+    db: Session = Depends(get_db)
+):
+    """すべてのサブスクリプション契約を取得する"""
+    contracts = (
+        db.query(SubscriptionContractModel)
+        .options(
+            joinedload(SubscriptionContractModel.customer),
+            joinedload(SubscriptionContractModel.items).joinedload(SubscriptionContractItemModel.product)
+        )
+        .all()
+    )
+    
+    response = []
+    for contract in contracts:
+        items_response = [
+            SubscriptionContractItemResponse(
+                product_id=item.product.id,
+                quantity=item.quantity,
+                product_name=item.product.name
+            )
+            for item in contract.items
+        ]
+        response.append(
+            SubscriptionContractResponse(
+                id=contract.id,
+                user_id=contract.user_id,
+                plan_name=contract.plan_name,
+                interval=contract.interval,
+                next_delivery_date=contract.next_delivery_date,
+                status=contract.status,
+                renewal_count=contract.renewal_count,
+                customer_name=contract.customer.name,
+                items=items_response
+            )
+        )
+    return response
+
+
 @app.get("/admin/all_inventory")
 async def get_all_inventory(
     admin_user: User = Depends(get_current_admin_user),
