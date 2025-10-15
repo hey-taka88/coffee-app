@@ -113,31 +113,55 @@ class ProductModel(Base):
 class BeanOrderModel(Base):
     __tablename__ = "bean_orders"
     
-    order_id = Column(String, primary_key=True, index=True) # "bo-001" など
-    user_id = Column(Integer, ForeignKey("users.id")) # どのユーザーが注文したか
-    date = Column(String) # YYYY-MM-DD
+    order_id = Column(String, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    date = Column(String)
     total_price = Column(Integer)
     shipping_address = Column(String)
     status = Column(String, default="paid")
+
+    # --- ここから新しいフィールドを追加 ---
+    payment_method = Column(String, default="credit_card")
+    shipping_method = Column(String, default="standard")
+    coupon_code = Column(String, nullable=True)
+    tracking_number = Column(String, nullable=True)
+    shipping_carrier = Column(String, nullable=True)
+    internal_notes = Column(String, nullable=True)
+    # --- ここまで ---
     
-    # この注文がどのユーザーに紐付いているか (SQLAlchemyのための設定)
     customer = relationship("UserModel")
-    # この注文にどの商品が紐付いているか (下のItemModelと連携)
     items = relationship("BeanOrderItemModel", back_populates="order")
+    history = relationship("OrderHistoryModel", back_populates="order") # 履歴との連携
 
 class BeanOrderItemModel(Base):
     __tablename__ = "bean_order_items"
     
-    item_id = Column(Integer, primary_key=True, autoincrement=True) # 注文商品ごとのユニークID
-    bean_order_id = Column(String, ForeignKey("bean_orders.order_id")) # どの注文か
-    product_id = Column(String, ForeignKey("products.id")) # どの商品か
+    item_id = Column(Integer, primary_key=True, autoincrement=True)
+    bean_order_id = Column(String, ForeignKey("bean_orders.order_id"))
+    product_id = Column(String, ForeignKey("products.id"))
     quantity = Column(Integer)
+
+    # --- ここから新しいフィールドを追加 ---
+    grind_option = Column(String, default="whole_bean") # 例: "whole_bean", "medium_grind"
+    roasting_date = Column(String, nullable=True)
+    lot_number = Column(String, nullable=True)
+    # --- ここまで ---
     
-    # この商品がどの注文に紐付いているか (上のBeanOrderModelと連携)
     order = relationship("BeanOrderModel", back_populates="items")
-    # この商品がどの商品マスターに紐付いているか
     product = relationship("ProductModel")
-# ... (BeanOrderItemModel の定義のすぐ下に追加) ...
+
+# --- ★★★ 新しいテーブル: 注文履歴 ★★★ ---
+class OrderHistoryModel(Base):
+    __tablename__ = "order_history"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(String, ForeignKey("bean_orders.order_id"))
+    timestamp = Column(DateTime, default=dt.datetime.now(timezone.utc))
+    actor_name = Column(String) # 例: "山田 太郎", "システム"
+    action = Column(String) # 例: "注文を作成しました", "ステータスを「発送済」に変更しました"
+
+    order = relationship("BeanOrderModel", back_populates="history")
+# --- ★★★ ここまで ★★★ ---
 
 class BeanInventoryModel(Base):
     __tablename__ = "bean_inventory" # デリバリー用の豆在庫
@@ -284,6 +308,53 @@ def on_startup():
             db.add(new_item)
             db.commit()
             print("--- Sample subscription created ---")
+
+        # サンプル焙煎豆注文が存在するか確認
+        sample_bean_order = db.query(BeanOrderModel).filter(BeanOrderModel.order_id == "bo-001").first()
+        if not sample_bean_order:
+            # 注文を作成
+            new_order = BeanOrderModel(
+                order_id="bo-001",
+                user_id=test_user.id,
+                date=datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+                total_price=3000,
+                shipping_address="東京都渋谷区神南１丁目１９−１１",
+                status="paid",
+                payment_method="credit_card",
+                shipping_method="express",
+                internal_notes="顧客からの初回注文。特に注意して対応。"
+            )
+            db.add(new_order)
+            db.commit()
+            db.refresh(new_order)
+
+            # 注文商品を紐付け
+            order_item = BeanOrderItemModel(
+                bean_order_id=new_order.order_id,
+                product_id="bean-001",
+                quantity=2,
+                grind_option="medium_grind",
+                roasting_date=(datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d"),
+                lot_number="L-20241014-01"
+            )
+            db.add(order_item)
+
+            # 注文履歴を紐付け
+            history1 = OrderHistoryModel(
+                order_id=new_order.order_id,
+                actor_name="システム",
+                action="注文が作成されました。"
+            )
+            history2 = OrderHistoryModel(
+                order_id=new_order.order_id,
+                timestamp=datetime.now(timezone.utc) + timedelta(minutes=5),
+                actor_name=test_user.name,
+                action="支払いを確認しました。"
+            )
+            db.add_all([history1, history2])
+            
+            db.commit()
+            print("--- Sample bean order created ---")
 
     finally:
         db.close()
@@ -766,6 +837,103 @@ async def get_all_orders_for_admin(
         bean_orders_response.append(order_dict)
 
     return {"delivery_orders": delivery_orders_response, "bean_orders": bean_orders_response}
+
+
+# --- ★★★ 新しいAPI: 注文詳細取得 ★★★ ---
+
+# --- レスポンスモデルの定義 ---
+class OrderHistoryResponse(BaseModel):
+    id: int
+    timestamp: dt.datetime
+    actor_name: str
+    action: str
+    class Config:
+        orm_mode = True
+
+class BeanOrderItemResponse(BaseModel):
+    product_id: str
+    quantity: int
+    grind_option: str
+    roasting_date: Optional[str]
+    lot_number: Optional[str]
+    product_name: str # 商品名も追加
+    unit_price: int # 単価も追加
+    class Config:
+        orm_mode = True
+
+class BeanOrderDetailResponse(BaseModel):
+    order_id: str
+    user_id: int
+    date: str
+    total_price: int
+    shipping_address: str
+    status: str
+    payment_method: str
+    shipping_method: str
+    coupon_code: Optional[str]
+    tracking_number: Optional[str]
+    shipping_carrier: Optional[str]
+    internal_notes: Optional[str]
+    customer: User # 顧客情報をネスト
+    items: List[BeanOrderItemResponse]
+    history: List[OrderHistoryResponse]
+    class Config:
+        orm_mode = True
+
+@app.get("/admin/bean_orders/{order_id}", response_model=BeanOrderDetailResponse)
+async def get_bean_order_details(
+    order_id: str,
+    admin_user: User = Depends(get_current_admin_user),
+    db: Session = Depends(get_db)
+):
+    """指定された焙煎豆の注文詳細を取得する"""
+    order = (
+        db.query(BeanOrderModel)
+        .options(
+            joinedload(BeanOrderModel.customer),
+            joinedload(BeanOrderModel.items).joinedload(BeanOrderItemModel.product),
+            joinedload(BeanOrderModel.history)
+        )
+        .filter(BeanOrderModel.order_id == order_id)
+        .first()
+    )
+
+    if not order:
+        raise HTTPException(status_code=404, detail="Bean order not found")
+
+    # レスポンスモデルに変換
+    items_response = [
+        BeanOrderItemResponse(
+            product_id=item.product.id,
+            quantity=item.quantity,
+            grind_option=item.grind_option,
+            roasting_date=item.roasting_date,
+            lot_number=item.lot_number,
+            product_name=item.product.name,
+            unit_price=item.product.price
+        )
+        for item in order.items
+    ]
+
+    return BeanOrderDetailResponse(
+        order_id=order.order_id,
+        user_id=order.user_id,
+        date=order.date,
+        total_price=order.total_price,
+        shipping_address=order.shipping_address,
+        status=order.status,
+        payment_method=order.payment_method,
+        shipping_method=order.shipping_method,
+        coupon_code=order.coupon_code,
+        tracking_number=order.tracking_number,
+        shipping_carrier=order.shipping_carrier,
+        internal_notes=order.internal_notes,
+        customer=order.customer,
+        items=items_response,
+        history=order.history
+    )
+
+# --- ★★★ ここまで ★★★ ---
 
 class StatusUpdate(BaseModel):
     status: str
