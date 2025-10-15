@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom'; // Linkをインポート
+import { Link, useNavigate } from 'react-router-dom'; // useNavigateをインポート
 import { toast } from 'react-toastify';
 import { getAllOrders, getAllInventory, updateOrderStatus } from './api';
 import ProductEditModal from './ProductEditModal.jsx';
@@ -39,6 +39,7 @@ export default function AdminDashboard({ token }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [editingProduct, setEditingProduct] = useState(null);
+  const navigate = useNavigate(); // useNavigateフックを使用
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -70,6 +71,13 @@ export default function AdminDashboard({ token }) {
       fetchData();
     } catch (err) {
       toast.error(`エラー: ${err.message}`);
+    }
+  };
+
+  const handleRowClick = (order) => {
+    // 焙煎豆の注文の場合のみ詳細ページに遷移
+    if (order.orderTypeForApi === 'bean') {
+      navigate(`/admin/orders/${order.id}`);
     }
   };
 
@@ -144,7 +152,11 @@ export default function AdminDashboard({ token }) {
             </thead>
             <tbody>
               {allOrders.map(order => (
-                <tr key={`${order.orderTypeForApi}-${order.id}`}>
+                <tr 
+                  key={`${order.orderTypeForApi}-${order.id}`}
+                  onClick={() => handleRowClick(order)}
+                  style={{ cursor: order.orderTypeForApi === 'bean' ? 'pointer' : 'default' }}
+                >
                   <td>{order.id}</td>
                   <td><TypeTag type={order.type} /></td>
                   <td>{order.customerName}</td>
@@ -156,6 +168,7 @@ export default function AdminDashboard({ token }) {
                       <StatusBadge status={order.orderStatus} />
                       <select 
                         value={order.rawStatus}
+                        onClick={(e) => e.stopPropagation()} // 親のonClickイベントの発火を阻止
                         onChange={(e) => handleStatusChange(order.id, e.target.value, order.orderTypeForApi)}
                       >
                         {order.statusOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}

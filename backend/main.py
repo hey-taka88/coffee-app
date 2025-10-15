@@ -14,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from pydantic import BaseModel
+from pydantic import BaseModel, computed_field
 
 # --- セキュリティ設定 ---
 # SECRET_KEY = "your-secret-key-is-not-secret-at-all" # ← この行をコメントアウトか削除
@@ -54,6 +54,9 @@ class User(BaseModel):
     email: str
     name: str
     role: str
+
+    class Config:
+        from_attributes = True
 
 class Token(BaseModel):
     access_token: str
@@ -218,9 +221,9 @@ class SubscriptionContractItemModel(Base):
 
 # --- 認証ヘルパー関数 ---
 def get_user(db: Session, email: str):
-    """
+    '''
     データベースからメールアドレスでユーザーを検索する（SQLAlchemy版）
-    """
+    '''
     return db.query(UserModel).filter(UserModel.email == email).first()
 
 def verify_password(plain_password, hashed_password):
@@ -233,7 +236,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 # --- ★★★ データベースセッションの依存関係 (ここから追加) ★★★ ---
 def get_db():
-    """APIリクエストの間だけデータベースセッションを確立する"""
+    '''APIリクエストの間だけデータベースセッションを確立する'''
     db = SessionLocal()
     try:
         yield db
@@ -242,7 +245,7 @@ def get_db():
 
 @app.on_event("startup")
 def on_startup():
-    """アプリ起動時にデータベースとテーブルを作成し、テストユーザーを登録する"""
+    '''アプリ起動時にデータベースとテーブルを作成し、テストユーザーを登録する'''
     Base.metadata.create_all(bind=engine)
 
     db = SessionLocal()
@@ -382,7 +385,7 @@ async def get_current_user(
     
     # Pydanticモデル(User)とSQLAlchemyモデル(UserModel)は別物なので、
     # ここでPydanticモデル(User)に詰め替えてから返す
-    return User(id=user.id, email=user.email, name=user.name, role=user.role)
+    return User.from_orm(user)
 
 
 async def get_current_admin_user(current_user: User = Depends(get_current_user)):
@@ -395,14 +398,14 @@ async def get_current_admin_user(current_user: User = Depends(get_current_user))
 # --- ★★★ ここに、抜けていた /users/me エンドポイントを追加 ★★★ ---
 @app.get("/users/me", response_model=User)
 async def read_users_me(current_user: User = Depends(get_current_user)):
-    """
+    '''
     ログイン中のユーザー情報を取得する
-    """
+    '''
     return current_user
 
 @app.post("/users", response_model=User, status_code=status.HTTP_201_CREATED)
 async def create_user(user: UserCreate, db: Session = Depends(get_db)):
-    """新規ユーザー登録"""
+    '''新規ユーザー登録'''
     db_user = get_user(db, email=user.email)
     if db_user:
         raise HTTPException(status_code=400, detail="このメールアドレスは既に使用されています")
@@ -449,7 +452,7 @@ async def read_user_orders(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """ログイン中のユーザーの注文履歴を取得する（完全DB版）"""
+    '''ログイン中のユーザーの注文履歴を取得する（完全DB版）'''
     user_id = current_user.id
 
     # --- デリバリー注文をDBから取得 ---
@@ -465,7 +468,7 @@ async def read_user_orders(
 
 @app.get("/settings")
 def get_settings(db: Session = Depends(get_db)): # ★ DBセッションを追加
-    """設定情報を返す（DB + ハードコード版）"""
+    '''設定情報を返す（DB + ハードコード版）'''
     
     # 1. デリバリー用の豆在庫をDBから取得
     inventory_items = db.query(BeanInventoryModel).filter(BeanInventoryModel.stock > 0).all()
@@ -494,7 +497,7 @@ async def create_order(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db) # ★ DBセッションを追加
 ):
-    """デリバリー注文を作成する（SQLAlchemy + トランザクション版）"""
+    '''デリバリー注文を作成する（SQLAlchemy + トランザクション版）'''
     
     try:
         # 1. 在庫テーブルから注文された豆を探す（ロックをかける）
@@ -502,7 +505,7 @@ async def create_order(
         
         # 2. 在庫確認
         if not bean_stock or bean_stock.stock <= 0:
-            raise HTTPException(status_code=400, detail=f"{order.beans}の在庫がありません。")
+            raise HTTPException(status_code=400, detail=f'{order.beans}の在庫がありません。')
             
         # 3. 在庫を1つ減らす
         bean_stock.stock -= 1
@@ -559,7 +562,7 @@ async def create_bean_order(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db) # ★ DBセッションを追加
 ):
-    """焙煎豆の注文を作成する (SQLAlchemy + トランザクション版)"""
+    '''焙煎豆の注文を作成する (SQLAlchemy + トランザクション版) '''
     
     # 1. トランザクション内で在庫の確認と価格の計算
     try:
@@ -639,7 +642,7 @@ class SubscriptionContractItemResponse(BaseModel):
     product_name: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class SubscriptionContractResponse(BaseModel):
     id: int
@@ -653,7 +656,7 @@ class SubscriptionContractResponse(BaseModel):
     items: List[SubscriptionContractItemResponse]
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # --- サブスクリプション作成用のリクエストモデル ---
 class SubscriptionCreateItem(BaseModel):
@@ -675,7 +678,7 @@ async def create_subscription(
     admin_user: User = Depends(get_current_admin_user),
     db: Session = Depends(get_db)
 ):
-    """新規サブスクリプション契約を作成する"""
+    '''新規サブスクリプション契約を作成する'''
     # ユーザーの存在確認
     user = db.query(UserModel).filter(UserModel.id == contract_data.user_id).first()
     if not user:
@@ -743,7 +746,7 @@ async def get_all_subscriptions(
     admin_user: User = Depends(get_current_admin_user),
     db: Session = Depends(get_db)
 ):
-    """すべてのサブスクリプション契約を取得する"""
+    '''すべてのサブスクリプション契約を取得する'''
     contracts = (
         db.query(SubscriptionContractModel)
         .options(
@@ -784,7 +787,7 @@ async def get_all_users(
     admin_user: User = Depends(get_current_admin_user),
     db: Session = Depends(get_db)
 ):
-    """すべてのユーザーを取得する (管理者用)"""
+    '''すべてのユーザーを取得する (管理者用) '''
     users = db.query(UserModel).all()
     return users
 
@@ -794,7 +797,7 @@ async def get_all_inventory(
     admin_user: User = Depends(get_current_admin_user),
     db: Session = Depends(get_db)
 ):
-    """焙煎豆とデリバリー豆のすべての在庫を返す"""
+    '''焙煎豆とデリバリー豆のすべての在庫を返す'''
 
     # 焙煎豆ストアの商品在庫
     roasted_beans = db.query(ProductModel).all()
@@ -810,7 +813,7 @@ async def get_all_orders_for_admin(
     admin_user: User = Depends(get_current_admin_user),
     db: Session = Depends(get_db)
 ):
-    """すべての注文を返す（完全DB版）"""
+    '''すべての注文を返す（完全DB版）'''
     
     # --- デリバリー注文をDBから取得（顧客名もJOIN） ---
     delivery_orders_response = []
@@ -848,7 +851,7 @@ class OrderHistoryResponse(BaseModel):
     actor_name: str
     action: str
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class BeanOrderItemResponse(BaseModel):
     product_id: str
@@ -856,10 +859,11 @@ class BeanOrderItemResponse(BaseModel):
     grind_option: str
     roasting_date: Optional[str]
     lot_number: Optional[str]
-    product_name: str # 商品名も追加
-    unit_price: int # 単価も追加
+    product_name: str
+    unit_price: int
+
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class BeanOrderDetailResponse(BaseModel):
     order_id: str
@@ -878,7 +882,7 @@ class BeanOrderDetailResponse(BaseModel):
     items: List[BeanOrderItemResponse]
     history: List[OrderHistoryResponse]
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 @app.get("/admin/bean_orders/{order_id}", response_model=BeanOrderDetailResponse)
 async def get_bean_order_details(
@@ -901,19 +905,22 @@ async def get_bean_order_details(
     if not order:
         raise HTTPException(status_code=404, detail="Bean order not found")
 
-    # レスポンスモデルに変換
+    # --- 手動でレスポンスモデルを構築 --- 
     items_response = [
         BeanOrderItemResponse(
-            product_id=item.product.id,
+            product_id=item.product_id,
             quantity=item.quantity,
             grind_option=item.grind_option,
             roasting_date=item.roasting_date,
             lot_number=item.lot_number,
-            product_name=item.product.name,
-            unit_price=item.product.price
+            product_name=item.product.name,  # 関連先のproductから取得
+            unit_price=item.product.price    # 関連先のproductから取得
         )
         for item in order.items
     ]
+
+    history_response = [OrderHistoryResponse.from_orm(h) for h in order.history]
+    customer_response = User.from_orm(order.customer)
 
     return BeanOrderDetailResponse(
         order_id=order.order_id,
@@ -928,9 +935,9 @@ async def get_bean_order_details(
         tracking_number=order.tracking_number,
         shipping_carrier=order.shipping_carrier,
         internal_notes=order.internal_notes,
-        customer=order.customer,
+        customer=customer_response,
         items=items_response,
-        history=order.history
+        history=history_response
     )
 
 # --- ★★★ ここまで ★★★ ---
@@ -945,7 +952,7 @@ async def update_delivery_order_status(
     admin_user: User = Depends(get_current_admin_user),
     db: Session = Depends(get_db) # ★ DBセッションを追加
 ):
-    """デリバリー注文のステータスを更新する（SQLAlchemy版）"""
+    '''デリバリー注文のステータスを更新する（SQLAlchemy版）'''
     order = db.query(OrderModel).filter(OrderModel.id == order_id).first()
             
     if not order:
@@ -962,7 +969,7 @@ async def update_bean_order_status(
     status_update: StatusUpdate,
     admin_user: User = Depends(get_current_admin_user)
 ):
-    """焙煎豆の注文ステータスを更新する"""
+    '''焙煎豆の注文ステータスを更新する'''
     data = load_data()
     
     order_found = False
@@ -992,7 +999,7 @@ async def update_product_info(
     admin_user: User = Depends(get_current_admin_user),
     db: Session = Depends(get_db) # ★ DBセッションを追加
 ):
-    """商品情報を更新する（SQLAlchemy版）"""
+    '''商品情報を更新する（SQLAlchemy版）'''
     # data = load_data() <- 古いコードを削除
     
     # 1. データベースから対象の商品を探す
@@ -1020,7 +1027,7 @@ async def read_user_orders(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db) # ★ DBセッションを追加
 ):
-    """ログイン中のユーザーの注文履歴を取得する（ハイブリッド版）"""
+    '''ログイン中のユーザーの注文履歴を取得する（ハイブリッド版）'''
     db_yaml = load_data() # ★ デリバリー注文のためにYAMLはまだ残す
     user_id = current_user.id
 
@@ -1055,7 +1062,7 @@ async def update_user_me(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db) # ★ DBセッションを追加
 ):
-    """ログイン中のユーザーの情報を更新する（SQLAlchemy版）"""
+    '''ログイン中のユーザーの情報を更新する（SQLAlchemy版）'''
     # data = load_data() <- 古いコードを削除
     
     # 1. データベースから現在のユーザーを探す (IDで探すのが確実)
@@ -1076,4 +1083,4 @@ async def update_user_me(
     
 # ... (update_user_me 関数の最後) ...
     # 5. Pydanticモデル(User)に詰め替えて返す
-    return User(id=user.id, email=user.email, name=user.name, role=user.role)
+    return User.from_orm(user)

@@ -13,6 +13,7 @@ import AdminProtectedRoute from './AdminProtectedRoute.jsx'; // ★★★ 1. "�
 import LoginForm from './LoginForm.jsx'; // LoginFormをインポート
 import OrderForm from './OrderForm.jsx'; // OrderFormをインポート
 import SubscriptionPage from './SubscriptionPage.jsx'; // SubscriptionPageをインポート
+import OrderDetailPage from './OrderDetailPage.jsx'; // OrderDetailPageをインポート
 
 
 function Navigation({ token, onLogout, currentUser }) {
@@ -109,6 +110,14 @@ function App() {
                   <SubscriptionPage />
                 </AdminProtectedRoute>
               } 
+            />
+            <Route 
+              path="/admin/orders/:orderId"
+              element={
+                <AdminProtectedRoute currentUser={currentUser}>
+                  <OrderDetailPage />
+                </AdminProtectedRoute>
+              }
             />
             <Route path="/" element={<ProductPage />} />
           </>

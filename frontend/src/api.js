@@ -209,3 +209,12 @@ export function createSubscription(contractData) {
     body: JSON.stringify(contractData),
   });
 }
+
+/**
+ * 指定されたIDの焙煎豆注文詳細を取得する (管理者用)
+ * @param {string} orderId
+ * @returns {Promise<any>}
+ */
+export function getBeanOrderDetail(orderId) {
+  return fetchWithAuth(`/admin/bean_orders/${orderId}`);
+}
