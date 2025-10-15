@@ -189,3 +189,23 @@ export function updateUserMe(userData) {
 export function getAllSubscriptions() {
   return fetchWithAuth('/admin/subscriptions');
 }
+
+/**
+ * すべてのユーザーを取得する (管理者用)
+ * @returns {Promise<any>}
+ */
+export function getAllUsers() {
+  return fetchWithAuth('/admin/users');
+}
+
+/**
+ * 新規サブスクリプション契約を作成する (管理者用)
+ * @param {object} contractData
+ * @returns {Promise<any>}
+ */
+export function createSubscription(contractData) {
+  return fetchWithAuth('/admin/subscriptions', {
+    method: 'POST',
+    body: JSON.stringify(contractData),
+  });
+}

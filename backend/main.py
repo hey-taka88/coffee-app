@@ -584,6 +584,89 @@ class SubscriptionContractResponse(BaseModel):
     class Config:
         orm_mode = True
 
+# --- サブスクリプション作成用のリクエストモデル ---
+class SubscriptionCreateItem(BaseModel):
+    product_id: str
+    quantity: int
+
+class SubscriptionCreate(BaseModel):
+    user_id: int
+    plan_name: str
+    interval: str
+    next_delivery_date: str
+    status: str
+    items: List[SubscriptionCreateItem]
+
+
+@app.post("/admin/subscriptions", response_model=SubscriptionContractResponse, status_code=status.HTTP_201_CREATED)
+async def create_subscription(
+    contract_data: SubscriptionCreate,
+    admin_user: User = Depends(get_current_admin_user),
+    db: Session = Depends(get_db)
+):
+    """新規サブスクリプション契約を作成する"""
+    # ユーザーの存在確認
+    user = db.query(UserModel).filter(UserModel.id == contract_data.user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # 新しい契約を作成
+    new_contract = SubscriptionContractModel(
+        user_id=contract_data.user_id,
+        plan_name=contract_data.plan_name,
+        interval=contract_data.interval,
+        next_delivery_date=contract_data.next_delivery_date,
+        status=contract_data.status,
+        renewal_count=0 # 新規なので0
+    )
+    db.add(new_contract)
+    db.commit()
+    db.refresh(new_contract)
+
+    # 契約に商品を紐付ける
+    for item in contract_data.items:
+        new_item = SubscriptionContractItemModel(
+            contract_id=new_contract.id,
+            product_id=item.product_id,
+            quantity=item.quantity
+        )
+        db.add(new_item)
+    
+    db.commit()
+
+    # フロントエンドに返すために、作成したデータを再度読み込む
+    created_contract = (
+        db.query(SubscriptionContractModel)
+        .options(
+            joinedload(SubscriptionContractModel.customer),
+            joinedload(SubscriptionContractModel.items).joinedload(SubscriptionContractItemModel.product)
+        )
+        .filter(SubscriptionContractModel.id == new_contract.id)
+        .first()
+    )
+    
+    items_response = [
+        SubscriptionContractItemResponse(
+            product_id=item.product.id,
+            quantity=item.quantity,
+            product_name=item.product.name
+        )
+        for item in created_contract.items
+    ]
+    
+    return SubscriptionContractResponse(
+        id=created_contract.id,
+        user_id=created_contract.user_id,
+        plan_name=created_contract.plan_name,
+        interval=created_contract.interval,
+        next_delivery_date=created_contract.next_delivery_date,
+        status=created_contract.status,
+        renewal_count=created_contract.renewal_count,
+        customer_name=created_contract.customer.name,
+        items=items_response
+    )
+
+
 @app.get("/admin/subscriptions", response_model=List[SubscriptionContractResponse])
 async def get_all_subscriptions(
     admin_user: User = Depends(get_current_admin_user),

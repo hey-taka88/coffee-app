@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getAllSubscriptions } from './api';
+import SubscriptionModal from './SubscriptionModal.jsx'; // モーダルをインポート
 
 // ステータス表示用のバッジコンポーネント
 const StatusBadge = ({ status }) => {
@@ -24,27 +25,47 @@ export default function SubscriptionPage() {
   const [subscriptions, setSubscriptions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false); // モーダルの表示状態
+
+  const fetchSubscriptions = async () => {
+    try {
+      setIsLoading(true);
+      const data = await getAllSubscriptions();
+      setSubscriptions(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchSubscriptions = async () => {
-      try {
-        const data = await getAllSubscriptions();
-        setSubscriptions(data);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setIsLoading(false);
-      }
-    };
     fetchSubscriptions();
   }, []);
 
-  if (isLoading) return <p>データを読み込み中...</p>;
+  const handleSaveSuccess = () => {
+    setIsModalOpen(false);
+    fetchSubscriptions(); // リストを再読み込み
+  };
+
+  if (isLoading && !isModalOpen) return <p>データを読み込み中...</p>;
   if (error) return <p>エラー: {error}</p>;
 
   return (
     <div className="page-container">
+      {isModalOpen && (
+        <SubscriptionModal 
+          onClose={() => setIsModalOpen(false)} 
+          onSave={handleSaveSuccess} 
+        />
+      )}
+
       <h1>サブスクリプション契約管理</h1>
+      
+      <div className="page-actions">
+        <button onClick={() => setIsModalOpen(true)}>新規契約を追加</button>
+      </div>
+
       <section className="dashboard-section">
         <div style={{ overflowX: 'auto' }}>
           <table>
